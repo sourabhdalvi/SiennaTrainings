@@ -53,9 +53,8 @@ rawsys = PSY.PowerSystemTableData(
     RTS_GMLC_DIR,
     100.0,
     joinpath(RTS_GMLC_DIR, "user_descriptors.yaml");
-    timeseries_metadata_file = joinpath(RTS_GMLC_DIR, "timeseries_pointers.json"),
-    generator_mapping_file = joinpath(RTS_GMLC_DIR, "generator_mapping.yaml"),
+    timeseries_metadata_file=joinpath(RTS_GMLC_DIR, "timeseries_pointers.json"),
+    generator_mapping_file=joinpath(RTS_GMLC_DIR, "generator_mapping.yaml"),
 )
-sys = PSY.System(rawsys; time_series_resolution = Dates.Hour(1), sys_kwargs...)
+sys = PSY.System(rawsys; time_series_resolution=Dates.Hour(1), sys_kwargs...)
 PSY.transform_single_time_series!(sys, 24, Dates.Hour(24))
-

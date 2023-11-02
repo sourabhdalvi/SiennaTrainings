@@ -53,7 +53,8 @@ remove_components!(HydroDispatch, sys)
 # Setting Components Offline
 # To exclude components from the simulation without deleting them permanently, you can set them as unavailable.
 # For example, here's how to set thermal generators with a maximum active power limit of 0.0 as unavailable:
-for gen in PSY.get_components(x -> PSY.get_active_power_limits(x).max == 0.0, PSY.ThermalGen, sys)
+for gen in
+    PSY.get_components(x -> PSY.get_active_power_limits(x).max == 0.0, PSY.ThermalGen, sys)
     PSY.set_available!(gen, false)
 end
 
@@ -63,30 +64,60 @@ end
 
 # Querying Combined Cycle Thermal Generators
 # 1. First, let's query all Combined Cycle thermal generators in the system:
-gen = PSY.get_components(x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.CC, PSY.ThermalGen, sys) |> first
+gen =
+    PSY.get_components(
+        x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.CC,
+        PSY.ThermalGen,
+        sys,
+    ) |> first
 
 # Querying Combined Cycle Thermal Generators in Region/Area 1
 # 2. Next, we'll narrow it down and query all Combined Cycle thermal generators from Region/Area 1 in the system:
-gen = PSY.get_components(x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.CT && PSY.get_name(PSY.get_area(PSY.get_bus(x))) == "1", PSY.ThermalGen, sys) |> first
+gen =
+    PSY.get_components(
+        x ->
+            PSY.get_prime_mover_type(x) == PSY.PrimeMovers.CT &&
+                PSY.get_name(PSY.get_area(PSY.get_bus(x))) == "1",
+        PSY.ThermalGen,
+        sys,
+    ) |> first
 
 # Querying Solar PV Plants
 # 3. Suppose you want to query all solar PV plants from the system with a nameplate capacity between 50 MW and 150 MW.
 # First, make sure the unit settings of the system are set to Natural units using:
 PSY.set_units_base_system!(sys, PSY.UnitSystem.NATURAL_UNITS)
 # Then, you can perform the query:
-gens = PSY.get_components(x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.PVe && PSY.get_max_active_power(x) >= 50.0 && PSY.get_max_active_power(x) <= 150.0, PSY.RenewableDispatch, sys) |> collect
+gens =
+    PSY.get_components(
+        x ->
+            PSY.get_prime_mover_type(x) == PSY.PrimeMovers.PVe &&
+                PSY.get_max_active_power(x) >= 50.0 &&
+                PSY.get_max_active_power(x) <= 150.0,
+        PSY.RenewableDispatch,
+        sys,
+    ) |> collect
 
 # Querying Wind Plants
 # 4. Now, let's perform a similar exercise, but this time for wind plants with a nameplate capacity above 100 MW:
-gens = PSY.get_components(x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.WT && PSY.get_rating(x) >= 100.0, PSY.RenewableDispatch, sys) |> collect
+gens =
+    PSY.get_components(
+        x ->
+            PSY.get_prime_mover_type(x) == PSY.PrimeMovers.WT && PSY.get_rating(x) >= 100.0,
+        PSY.RenewableDispatch,
+        sys,
+    ) |> collect
 
 # Updating Device Parameters
 # Here, we provide an example function to change the ramp rate of each thermal device in the system.
 # You can easily modify this function by passing a filter function to apply it to specific groups of thermal generators.
 function update_thermal_ramp_rates!(sys)
-    for th in get_components(x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.CT, ThermalGen, sys)
+    for th in get_components(
+        x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.CT,
+        ThermalGen,
+        sys,
+    )
         pmax = get_active_power_limits(th).max
-        set_ramp_limits!(th, (up = (pmax*0.2)/60, down = (pmax*0.2)/60)) # Ramp rate is expected to be in MW/min
+        set_ramp_limits!(th, (up=(pmax * 0.2) / 60, down=(pmax * 0.2) / 60)) # Ramp rate is expected to be in MW/min
     end
     return
 end
@@ -99,7 +130,7 @@ update_thermal_ramp_rates!(sys)
 function copy_component(sys::PSY.System, re::PSY.RenewableDispatch, bus_name, name)
     # Get the bus associated with the specified name
     bus = PSY.get_component(Bus, sys, bus_name)
-    
+
     # Create a new RenewableDispatch component as a copy
     device = PSY.RenewableDispatch(
         name=name,               # Set the name for the new component
@@ -112,14 +143,20 @@ function copy_component(sys::PSY.System, re::PSY.RenewableDispatch, bus_name, na
         reactive_power_limits=get_reactive_power_limits(re),  # Copy reactive power limits
         power_factor=get_power_factor(re),              # Copy power factor
         operation_cost=get_operation_cost(re),          # Copy operation cost
-        base_power=get_base_power(re)                  # Copy base power
+        base_power=get_base_power(re),                  # Copy base power
     )
-    
+
     return device  # Return the newly created component
 end
 
 # Creating a copy of the device to add new capacity to the system.
-pv = first(get_components(x-> x.prime_mover_type == PSY.PrimeMovers.PVe, PSY.RenewableDispatch, sys))
+pv = first(
+    get_components(
+        x -> x.prime_mover_type == PSY.PrimeMovers.PVe,
+        PSY.RenewableDispatch,
+        sys,
+    ),
+)
 device = copy_component(sys, pv, PSY.get_name(PSY.get_bus(pv)), "new_PV")  # Create a new PV component as a copy
 
 # Adding the new component to the system
@@ -134,7 +171,14 @@ copy_time_series!(device, pv)  # Copy time series data from the original PV devi
 # This code demonstrates how to create a new battery component, customize its parameters, and add it to the power system.
 
 # Adding New Components
-function _build_battery(::Type{T}, bus::PSY.Bus, name::String, energy_capacity, rating, efficiency) where {T<:PSY.Storage}
+function _build_battery(
+    ::Type{T},
+    bus::PSY.Bus,
+    name::String,
+    energy_capacity,
+    rating,
+    efficiency,
+) where {T <: PSY.Storage}
     # Create a new storage device of the specified type
     device = T(
         name=name,                         # Set the name for the new component
@@ -150,14 +194,24 @@ function _build_battery(::Type{T}, bus::PSY.Bus, name::String, energy_capacity, 
         efficiency=(in=efficiency, out=1.0),  # Set efficiency
         reactive_power=0.0,                # Set reactive power
         reactive_power_limits=nothing,      # No reactive power limits
-        base_power=100.0                   # Set base power
+        base_power=100.0,                   # Set base power
     )
-    
+
     return device  # Return the newly created component
 end
 
 # Creating a copy of the device to add new capacity to the system.
-bus = PSY.get_bus(first(get_components(x-> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.PVe && PSY.get_max_active_power(x) >= 150.0, PSY.RenewableDispatch, sys)))
+bus = PSY.get_bus(
+    first(
+        get_components(
+            x ->
+                PSY.get_prime_mover_type(x) == PSY.PrimeMovers.PVe &&
+                    PSY.get_max_active_power(x) >= 150.0,
+            PSY.RenewableDispatch,
+            sys,
+        ),
+    ),
+)
 device = _build_battery(GenericBattery, bus, "new_battery", 10.0, 2.5, 0.8)  # Create a new battery component
 
 add_component!(sys, device)  # Add the new battery component to the system
@@ -170,7 +224,7 @@ function PSY.convert_component!(
     thtype::Type{PSY.ThermalMultiStart},
     th::ThermalStandard,
     sys::System;
-    kwargs...
+    kwargs...,
 )
     # Converting Thermal Devices (Continued)
     # Arguments:
@@ -202,8 +256,7 @@ function PSY.convert_component!(
         must_run=true,
         time_at_status=PSY.get_time_at_status(th),
         dynamic_injector=PSY.get_dynamic_injector(th),
-        ext=Dict{String,Any}(),
-        
+        ext=Dict{String, Any}(),
     )
     PSY.add_component!(sys, new_th)
     PSY.copy_time_series!(new_th, th)
@@ -225,7 +278,8 @@ end
 # This ensures that nuclear units are set as "must-run" units in your UC problem.
 
 function convert_must_run_units!(sys)
-    for d in PSY.get_components(x -> x.fuel == PSY.ThermalFuels.NUCLEAR, PSY.ThermalGen, sys)
+    for d in
+        PSY.get_components(x -> x.fuel == PSY.ThermalFuels.NUCLEAR, PSY.ThermalGen, sys)
         PSY.convert_component!(PSY.ThermalMultiStart, d, sys)
     end
 end
@@ -253,13 +307,18 @@ function add_reserves(sys; reserve_frac=0.1)
         requirement=maximum(reserve_ts) / 100,
     )
 
-    contri_devices = PSY.get_components(x-> !(typeof(x) <: PSY.StaticLoad), PSY.StaticInjection, sys)
+    contri_devices =
+        PSY.get_components(x -> !(typeof(x) <: PSY.StaticLoad), PSY.StaticInjection, sys)
     PSY.add_service!(sys, service, contri_devices)
 
     PSY.add_time_series!(
         sys,
         service,
-        PSY.SingleTimeSeries("requirement", TimeSeries.TimeArray(TS, reserve_ts ./ maximum(reserve_ts)), scaling_factor_multiplier=PSY.get_requirement)
+        PSY.SingleTimeSeries(
+            "requirement",
+            TimeSeries.TimeArray(TS, reserve_ts ./ maximum(reserve_ts)),
+            scaling_factor_multiplier=PSY.get_requirement,
+        ),
     )
 
     return
@@ -271,13 +330,13 @@ add_reserves(sys; reserve_frac=0.05)
 # Ensure storage eligibility, filtering StaticInjection,
 # excluding StaticLoad & StaticInjectionSubSystem.
 
-
 function update_contributing_devices!(sys, service)
     area_name = last(split(service.name, "_"))
     contributing_devices = PSY.get_components(
-        x-> (x.bus.load_zone.name == area_name
-            && !(typeof(x) <: PSY.StaticLoad)
-            && !(typeof(x) <: PSY.StaticInjectionSubsystem)
+        x -> (
+            x.bus.load_zone.name == area_name &&
+            !(typeof(x) <: PSY.StaticLoad) &&
+            !(typeof(x) <: PSY.StaticInjectionSubsystem)
         ),
         PSY.StaticInjection,
         sys,
@@ -301,7 +360,11 @@ update_service_contributions!(sys)
 # Here's a simple Julia function, `get_day_ahead_timestamps`, for generating timestamps, which can be helpful for adding time series data:
 
 function get_day_ahead_timestamps(sim_year)
-    return collect(DateTime("$(sim_year)-01-01T00:00:00"):Hour(1):DateTime("$(sim_year)-12-31T23:00:00"))
+    return collect(
+        DateTime("$(sim_year)-01-01T00:00:00"):Hour(1):DateTime(
+            "$(sim_year)-12-31T23:00:00",
+        ),
+    )
 end
 
 # Modifying Time Series Data
@@ -311,15 +374,19 @@ end
 function update_wind_timeseries!(sys)
     # Set the units of the power system to natural_units (common in power system modeling)
     PSY.set_units_base_system!(sys, "natural_units")
-    
+
     # Define the simulation year
     sim_year = 2020
-    
+
     # Generate timestamps for the entire year based on the simulation year
     TS = get_day_ahead_timestamps(sim_year)
 
     # Iterate through all renewable dispatch components (likely wind turbines) in the power system
-    for re in PSY.get_components(x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.WT, PSY.RenewableDispatch, sys)
+    for re in PSY.get_components(
+        x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.WT,
+        PSY.RenewableDispatch,
+        sys,
+    )
         # Get the maximum active power limit for the current wind generation component
         max_active_power = PSY.get_max_active_power(re)
 
@@ -327,7 +394,7 @@ function update_wind_timeseries!(sys)
         for ts_name in PSY.get_time_series_names(PSY.SingleTimeSeries, re)
             # Retrieve the original time series data and reduce it by 5%
             ts_data = PSY.get_time_series_values(PSY.SingleTimeSeries, re, ts_name) .* 0.95
-            
+
             # Remove the original time series data
             PSY.remove_time_series!(sys, PSY.SingleTimeSeries, re, ts_name)
 
@@ -335,20 +402,22 @@ function update_wind_timeseries!(sys)
             new_st = PSY.SingleTimeSeries(
                 name=ts_name,
                 data=TimeArray(TS, ts_data),
-                scaling_factor_multiplier=PSY.get_max_active_power
+                scaling_factor_multiplier=PSY.get_max_active_power,
             )
 
             # Add the newly created time series back to the power system
             PSY.add_time_series!(sys, re, new_st)
         end
     end
-    
+
     # The function does not explicitly return a value but updates the wind generation time series data in the power system.
     return
 end
-
 
 update_wind_timeseries!(sys)
 
 ## Write final system to disk to save all changes.
 PSY.to_json(sys, "data/RTS_GMLC_DA_test_modifications.json")
+
+
+##

@@ -8,13 +8,15 @@ using CSV
 using Dates
 using SIIP2Marmot
 
-
 ### 1. First Example how to resolve a infeasiblity in Sienna
 
-sys = PSY.System("../data/WECC_ADS_2030_PCM.json", runchecks=false, time_series_read_only = true, time_series_directory="/tmp/scratch",);
+sys = PSY.System(
+    "../data/WECC_ADS_2030_PCM.json",
+    runchecks=false,
+    time_series_read_only=true,
+    time_series_directory="/tmp/scratch",
+);
 transform_single_time_series!(sys, 24, Hour(24))
-
-
 
 # Define the output directory for the simulation results
 output_dir = joinpath(dirname(pwd()), "simulation_results")
@@ -26,7 +28,7 @@ end
 
 # Create an Xpress optimizer object with specified attributes
 solver = optimizer_with_attributes(
-    Xpress.Optimizer, 
+    Xpress.Optimizer,
     "MIPRELSTOP" => 1e-5, # Set the relative mip gap tolerance
     "OUTPUTLOG" => 1, # Enable logging
     "MAXTIME" => 1000, # Set the maximum solver time (in seconds)
@@ -34,7 +36,7 @@ solver = optimizer_with_attributes(
     "MAXMEMORYSOFT" => 30000, # Set the maximum amount of memory the solver can use (in MB)
 )
 # Create a unit commitment template using the PSI package, with the CopperPlatePowerModel network as input
-template_uc = PSI.template_unit_commitment(; network = CopperPlatePowerModel)
+template_uc = PSI.template_unit_commitment(; network=CopperPlatePowerModel)
 
 # Load the system data from the specified directory and set up the time series data
 sys = System(sys_path; time_series_directory="/tmp/scratch")
@@ -59,8 +61,7 @@ models = SimulationModels(
 )
 
 # Create a SimulationSequence object with the SimulationModels object and an InterProblemChronology object
-sequence =
-    SimulationSequence(models=models, ini_cond_chronology=InterProblemChronology())
+sequence = SimulationSequence(models=models, ini_cond_chronology=InterProblemChronology())
 
 # Create a Simulation object with a specified name, number of steps, and the SimulationSequence object
 sim = Simulation(
@@ -79,14 +80,25 @@ execute!(sim, enable_progress_bar=true)
 
 ### 2. Vetting PVe or Wind Time series data
 
-pv = first(get_components(x-> x.prime_mover == PSY.PrimeMovers.PVe, RenewableGen, sys,))
-ts = get_time_series_array(SingleTimeSeries, pv, "max_active_power"; ignore_scaling_factors=false, len = 24)
+pv = first(get_components(x -> x.prime_mover == PSY.PrimeMovers.PVe, RenewableGen, sys))
+ts = get_time_series_array(
+    SingleTimeSeries,
+    pv,
+    "max_active_power";
+    ignore_scaling_factors=false,
+    len=24,
+)
 plot(ts)
 
-wind = first(get_components(x-> x.prime_mover == PSY.PrimeMovers.WT, RenewableGen, sys,))
-ts = get_time_series_array(SingleTimeSeries, wind, "max_active_power"; ignore_scaling_factors=true, len = 24)
+wind = first(get_components(x -> x.prime_mover == PSY.PrimeMovers.WT, RenewableGen, sys))
+ts = get_time_series_array(
+    SingleTimeSeries,
+    wind,
+    "max_active_power";
+    ignore_scaling_factors=true,
+    len=24,
+)
 plot(ts)
 # or using PowerSystemsApps to create a table of system data
-
 
 ### 3. 

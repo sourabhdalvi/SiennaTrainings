@@ -14,7 +14,7 @@ using StorageSystemsSimulations
 ### Parsing Args
 sim_name = ARGS[1]
 sys_name = ARGS[2]
-output_dir =  ARGS[3]
+output_dir = ARGS[3]
 #=
 sim_name = "test"
 sys_name = "data/RTS_GMLC_DA_test_modifications.json"
@@ -30,10 +30,9 @@ if !ispath(output_dir)
     mkpath(output_dir)
 end
 
-
 # Create an Xpress optimizer object with specified attributes
 solver = optimizer_with_attributes(
-    Xpress.Optimizer, 
+    Xpress.Optimizer,
     "MIPRELSTOP" => 1e-5, # Set the relative mip gap tolerance
     "OUTPUTLOG" => 1, # Enable logging
     "MAXTIME" => 1000, # Set the maximum solver time (in seconds)
@@ -41,7 +40,7 @@ solver = optimizer_with_attributes(
     "MAXMEMORYSOFT" => 30000, # Set the maximum amount of memory the solver can use (in MB)
 )
 
-template_uc = PSI.template_unit_commitment(; network = CopperPlatePowerModel)
+template_uc = PSI.template_unit_commitment(; network=CopperPlatePowerModel)
 
 sys = System(sys_path; time_series_directory="/tmp/scratch")
 PSY.transform_single_time_series!(sys, horizon, Hour(interval))
@@ -62,8 +61,7 @@ models = SimulationModels(
     ],
 )
 
-sequence =
-    SimulationSequence(models=models, ini_cond_chronology=InterProblemChronology())
+sequence = SimulationSequence(models=models, ini_cond_chronology=InterProblemChronology())
 
 sim = Simulation(
     name="$(sim_name)",
@@ -74,4 +72,3 @@ sim = Simulation(
 )
 build!(sim, serialize=true)
 execute!(sim, enable_progress_bar=true)
-

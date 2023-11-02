@@ -217,6 +217,10 @@ add_component!(sys, device)  # Add the new battery component to the system
 
 To convert thermal devices from `ThermalStandard` to `ThermalMultiStart`, use the `PSY.convert_component!` function. This is often used to set devices as "must-run" units in the Unit Commitment (UC) problem.
 
+- `thtype::Type{PSY.ThermalMultiStart}` specifies the target type (`ThermalMultiStart`).
+- `th::ThermalStandard` represents the thermal device you want to convert.
+- `sys::System` is your power system model.
+
 ```julia
 function PSY.convert_component!(
     thtype::Type{PSY.ThermalMultiStart},
@@ -224,11 +228,53 @@ function PSY.convert_component!(
     sys::System;
     kwargs...
 )
-```
+    # Converting Thermal Devices (Continued)
+    # Arguments:
+    # - `thtype::Type{PSY.ThermalMultiStart}` specifies the target type (`ThermalMultiStart`).
+    # - `th::ThermalStandard` represents the thermal device you want to convert.
+    # - `sys::System` is your power system model.
+    # - `kwargs...` are additional keyword arguments.
 
-- `thtype::Type{PSY.ThermalMultiStart}` specifies the target type (`ThermalMultiStart`).
-- `th::ThermalStandard` represents the thermal device you want to convert.
-- `sys::System` is your power system model.
+    new_th = thtype(
+        name=PSY.get_name(th),
+        available=true,
+        status=PSY.get_status(th),
+        bus=PSY.get_bus(th),
+        active_power=PSY.get_active_power(th),
+        reactive_power=PSY.get_reactive_power(th),
+        rating=PSY.get_rating(th),
+        prime_mover_type=PSY.get_prime_mover_type(th),
+        fuel=PSY.get_fuel(th),
+        active_power_limits=PSY.get_active_power_limits(th),
+        reactive_power_limits=PSY.get_reactive_power_limits(th),
+        ramp_limits=PSY.get_ramp_limits(th),
+        time_limits=PSY.get_time_limits(th),
+        power_trajectory=nothing,
+        start_time_limits=nothing,
+        start_types=1,
+        operation_cost=PSY.get_operation_cost(th),
+        base_power=PSY.get_base_power(th),
+        services=Device[],
+        must_run=true,
+        time_at_status=PSY.get_time_at_status(th),
+        dynamic_injector=PSY.get_dynamic_injector(th),
+        ext=Dict{String, Any}(),
+    )
+    PSY.add_component!(sys, new_th)
+    PSY.copy_time_series!(new_th, th)
+    new_th.ext = th.ext
+
+    # Transfer over the same service eligibility
+    for service in PSY.get_services(th)
+        PSY.add_service!(new_th, service, sys)
+    end
+
+    # Remove old device from system
+    PSY.remove_component!(sys, th)
+
+    return
+end
+```
 
 ### Converting Nuclear Devices
 
@@ -236,6 +282,11 @@ To convert all nuclear devices in your system, use the `convert_must_run_units!`
 
 ```julia
 function convert_must_run_units!(sys)
+    for d in
+        PSY.get_components(x -> x.fuel == PSY.ThermalFuels.NUCLEAR, PSY.ThermalGen, sys)
+        PSY.convert_component!(PSY.ThermalMultiStart, d, sys)
+    end
+end
 ```
 
 ## Adding Reserves
@@ -244,23 +295,85 @@ function convert_must_run_units!(sys)
 
 The `add_reserves` function allows you to add reserve capacity to your system, which is essential for maintaining grid reliability.
 
-```julia
-function add_reserves(sys; reserve_frac=0.1)
-```
 
 - `sys::System` is your power system model.
 - `reserve_frac` (default 0.1) determines the reserve capacity as a fraction of the maximum load.
+
+
+```julia
+function add_reserves(sys; reserve_frac=0.1)
+    PSY.set_units_base_system!(sys, PSY.UnitSystem.NATURAL_UNITS)
+    power_loads = PSY.get_components(PSY.PowerLoad, sys)
+    reserve_ts = zeros(8784)
+    TS = nothing
+
+    for p in power_loads
+        ts = PSY.get_time_series_values(PSY.SingleTimeSeries, p, "max_active_power")
+        reserve_ts .= reserve_ts .+ ts .* reserve_frac
+        TS = PSY.get_time_series_timestamps(PSY.SingleTimeSeries, p, "max_active_power")
+    end
+
+    service = PSY.VariableReserve{PSY.ReserveUp}(
+        name="new_reserve",
+        available=true,
+        time_frame=1.0,
+        requirement=maximum(reserve_ts) / 100,
+    )
+
+    contri_devices =
+        PSY.get_components(x -> !(typeof(x) <: PSY.StaticLoad), PSY.StaticInjection, sys)
+    PSY.add_service!(sys, service, contri_devices)
+
+    PSY.add_time_series!(
+        sys,
+        service,
+        PSY.SingleTimeSeries(
+            "requirement",
+            TimeSeries.TimeArray(TS, reserve_ts ./ maximum(reserve_ts)),
+            scaling_factor_multiplier=PSY.get_requirement,
+        ),
+    )
+
+    return
+end
+
+```
 
 ### Updating Contributing Devices
 
 To ensure that the necessary storage devices are eligible for providing reserves, use the `update_contributing_devices!` function.
 
-```julia
-function update_contributing_devices!(sys, service)
-```
 
 - `sys` is your power system model.
 - `service` is the reserve service to which contributing devices should be assigned.
+
+
+```julia
+function update_contributing_devices!(sys, service)
+    area_name = last(split(service.name, "_"))
+    contributing_devices = PSY.get_components(
+        x -> (
+            x.bus.load_zone.name == area_name &&
+            !(typeof(x) <: PSY.StaticLoad) &&
+            !(typeof(x) <: PSY.StaticInjectionSubsystem)
+        ),
+        PSY.StaticInjection,
+        sys,
+    )
+    for device in contributing_devices
+        PSY.add_service!(device, service, sys)
+    end
+    return
+end
+
+function update_service_contributions!(sys)
+    for service in PSY.get_components(PSY.VariableReserve, sys)
+        update_contributing_devices!(sys, service)
+    end
+    return
+end
+
+```
 
 ### Example Function: Generating Timestamps
 
@@ -276,16 +389,56 @@ get_day_ahead_timestamps(sim_year) = collect(DateTime("$(sim_year)-01-01T00:00:0
 
 The `update_wind_timeseries!` function allows you to modify the time series data for wind generation. In this example, we reduce wind generation by 5%, but you can adapt this workflow for other adjustments.
 
-```julia
-function update_wind_timeseries!(sys, file_path_max, file_path_min)
-```
-
 - `sys` is your power system model.
 - `file_path_max` and `file_path_min` specify the file paths for maximum and minimum wind generation data.
 
+
+```julia
+function update_wind_timeseries!(sys)
+    # Set the units of the power system to natural_units (common in power system modeling)
+    PSY.set_units_base_system!(sys, "natural_units")
+
+    # Define the simulation year
+    sim_year = 2020
+
+    # Generate timestamps for the entire year based on the simulation year
+    TS = get_day_ahead_timestamps(sim_year)
+
+    # Iterate through all renewable dispatch components (likely wind turbines) in the power system
+    for re in PSY.get_components(
+        x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.WT,
+        PSY.RenewableDispatch,
+        sys,
+    )
+        # Get the maximum active power limit for the current wind generation component
+        max_active_power = PSY.get_max_active_power(re)
+
+        # Iterate through all time series associated with the current wind generation component
+        for ts_name in PSY.get_time_series_names(PSY.SingleTimeSeries, re)
+            # Retrieve the original time series data and reduce it by 5%
+            ts_data = PSY.get_time_series_values(PSY.SingleTimeSeries, re, ts_name) .* 0.95
+
+            # Remove the original time series data
+            PSY.remove_time_series!(sys, PSY.SingleTimeSeries, re, ts_name)
+
+            # Create a new time series with the updated data
+            new_st = PSY.SingleTimeSeries(
+                name=ts_name,
+                data=TimeArray(TS, ts_data),
+                scaling_factor_multiplier=PSY.get_max_active_power,
+            )
+
+            # Add the newly created time series back to the power system
+            PSY.add_time_series!(sys, re, new_st)
+        end
+    end
+    return
+end
+```
+
 ## Saving the Modified System
 
-After making these modifications, save your updated system to a JSON file for further analysis or simulations:
+After making these modifications, save your updated system to a JSON file for further analysis or simulations.
 
 ```julia
 PSY.to_json("data/RTS_GMLC_DA_test_modifications.json")
