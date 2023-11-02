@@ -21,7 +21,7 @@ sys = PSY.System("data/RTS_GMLC_DA.json");
 ## Transform Static Time Series into Forecasts
 
 In many modeling workflows, it's common to transform data generated from a realization and stored in a single column into deterministic forecasts. This transformation accounts for the effects of lookahead. However, it can lead to large data duplications in overlapping windows between forecasts. PowerSystems provides a method to transform SingleTimeSeries data into Deterministic forecasts without duplicating any data. The resulting object behaves exactly like a Deterministic. Instead of storing windows at each initial time, it provides a view into the existing data at incrementing offsets.
-
+![Alt text](image.png)
 ```julia
 transform_single_time_series!(sys, 24, Hour(24))
 ```

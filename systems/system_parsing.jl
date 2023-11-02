@@ -3,7 +3,7 @@
 using PowerSystems
 using PowerSimulations
 using PowerSystemCaseBuilder
-
+using Dates
 const PSB = PowerSystemCaseBuilder
 const PSY = PowerSystems
 
@@ -16,19 +16,12 @@ const PSY = PowerSystems
 
 # Accessing Test Data:
 # --------------------
-# Several RAW file examples are available, but here, we'll copy the current set.
+# All of the Power Systems Test Data is hosted in a [PowerSystemsTestData](https://github.com/NREL-Sienna/PowerSystemsTestData) GitHub repo. But for this tutorial we will just use a version of the this data downloaded by PowerSystemCaseBuiler package.
+# Below is an example on how we can access this dataset for extracting a PSSE RAW file.
 readdir(joinpath(PSB.DATA_DIR, "psse_raw"))
 
-# Copy the RTS-GMLC raw file to our data directory.
+# For this tutorial, we will focus on the RTS-GMLC system and copy the raw file to our data directory:
 cp(joinpath(PSB.DATA_DIR, "psse_raw", "RTS-GMLC.RAW"), "data/RTS-GMLC.RAW")
-
-# Similarly, copy the RTS-GMLC MATPOWER file.
-readdir(joinpath(PSB.DATA_DIR, "matpower"))
-cp(joinpath(PSB.DATA_DIR, "matpower", "RTS_GMLC.m"), "data/RTS_GMLC.m")
-
-# Copy all RTS-GMLC data.
-RTS_GMLC_DIR = joinpath(PSB.DATA_DIR, "RTS_GMLC")
-cp(RTS_GMLC_DIR, "data/RTS_GMLC")
 
 # Parsing Files:
 # --------------
@@ -42,10 +35,20 @@ cp(RTS_GMLC_DIR, "data/RTS_GMLC")
 sys_psse = System("./data/RTS-GMLC.RAW")
 
 # Example 2: Parsing a Matpower .m File
+# We will  copy the MATPOWER version of the RTS-GMLC data as for this example.
+
+readdir(joinpath(PSB.DATA_DIR, "matpower"))
+cp(joinpath(PSB.DATA_DIR, "matpower", "RTS_GMLC.m"), "data/RTS_GMLC.m")
+
 # Comprehensive data in Matpower allows for a complete PCM system build in one step.
 sys_matpower = System("./data/RTS_GMLC.m")
 
 # Example 3: Parsing Tabular Data Format
+
+# Lastly, let's copy all data related to RTS-GMLC Tabular Dataset:
+cp(joinpath(PSB.DATA_DIR, "RTS_GMLC"), "data/RTS_GMLC")
+RTS_GMLC_DIR =  "data/RTS_GMLC"
+
 # This format uses .CSV files for each infrastructure type (e.g., bus.csv). 
 # It also supports parsing of time series data. The format allows flexibility in 
 # data representation and storage.
@@ -56,5 +59,5 @@ rawsys = PSY.PowerSystemTableData(
     timeseries_metadata_file=joinpath(RTS_GMLC_DIR, "timeseries_pointers.json"),
     generator_mapping_file=joinpath(RTS_GMLC_DIR, "generator_mapping.yaml"),
 )
-sys = PSY.System(rawsys; time_series_resolution=Dates.Hour(1), sys_kwargs...)
+sys = PSY.System(rawsys; time_series_resolution=Dates.Hour(1), )
 PSY.transform_single_time_series!(sys, 24, Dates.Hour(24))

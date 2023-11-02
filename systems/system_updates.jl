@@ -20,7 +20,9 @@ sys = PSY.System("data/RTS_GMLC_DA.json")
 # In many modeling workflows, it's common to transform data generated from a realization and stored in a single column into deterministic forecasts.
 # This transformation accounts for the effects of lookahead without duplicating data.
 # transform_single_time_series!(sys, horizon, interval) where horizon is expected to be Int and Interval should be a time period.
-transform_single_time_series!(sys, 48, Hour(24))
+horizon = 48
+interval = Hour(24)
+transform_single_time_series!(sys, horizon, interval)
 
 # Accessing Components
 # You can access all the components of a particular type.
@@ -53,8 +55,11 @@ remove_components!(HydroDispatch, sys)
 # Setting Components Offline
 # To exclude components from the simulation without deleting them permanently, you can set them as unavailable.
 # For example, here's how to set thermal generators with a maximum active power limit of 0.0 as unavailable:
+filter_function = x -> PSY.get_active_power_limits(x).max == 0.0
+filter_function = x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.ST
+filter_function = x -> PSY.get_prime_mover_type(x) == PSY.PrimeMovers.ST && PSY.get_fuel(x) == PSY.ThermalFuels.COAL
 for gen in
-    PSY.get_components(x -> PSY.get_active_power_limits(x).max == 0.0, PSY.ThermalGen, sys)
+    PSY.get_components(filter_function, PSY.ThermalGen, sys)
     PSY.set_available!(gen, false)
 end
 
@@ -164,8 +169,6 @@ add_component!(sys, device)  # Add the new PV component to the system
 
 # Copying over the time series data from the original device to the new device.
 copy_time_series!(device, pv)  # Copy time series data from the original PV device to the new PV device
-
-# TODO: example with shared references on Variable cost
 
 # Adding a New Battery Component
 # This code demonstrates how to create a new battery component, customize its parameters, and add it to the power system.

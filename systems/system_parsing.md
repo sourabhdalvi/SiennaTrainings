@@ -23,31 +23,15 @@ We will utilize the Power Systems Test Data, a curated set of test systems. Thes
  2. Providing users a springboard to learn and explore Sienna.
 
 ## Accessing Test Data
-
-There are several RAW file examples available. For this tutorial, we will focus on copying the current set:
-
+All of the Power Systems Test Data is hosted in a [PowerSystemsTestData](https://github.com/NREL-Sienna/PowerSystemsTestData) GitHub repo. But for this tutorial we will just use a version of the this data downloaded by PowerSystemCaseBuiler package.
+Below is an example on how we can access this dataset for extracting a PSSE RAW file.
 ```julia
 readdir(joinpath(PSB.DATA_DIR, "psse_raw"))
 ```
-
-Now, let's copy the RTS-GMLC raw file to our data directory:
+For this tutorial, we will focus on the RTS-GMLC system and copy the raw file to our data directory:
 
 ```julia
 cp(joinpath(PSB.DATA_DIR, "psse_raw", "RTS-GMLC.RAW"), "data/RTS-GMLC.RAW")
-```
-
-We will also copy the MATPOWER version of the RTS-GMLC data:
-
-```julia
-readdir(joinpath(PSB.DATA_DIR, "matpower"))
-cp(joinpath(PSB.DATA_DIR, "matpower", "RTS_GMLC.m"), "data/RTS_GMLC.m")
-```
-
-Lastly, let's copy all data related to RTS-GMLC:
-
-```julia
-RTS_GMLC_DIR = joinpath(PSB.DATA_DIR, "RTS_GMLC")
-cp(RTS_GMLC_DIR, "data/RTS_GMLC")
 ```
 
 ## Parsing Files
@@ -64,6 +48,13 @@ sys_psse = System("./data/RTS-GMLC.RAW")
 
 ### Example 2: Parsing a Matpower .m File
 
+We will  copy the MATPOWER version of the RTS-GMLC data as for this example.
+
+```julia
+readdir(joinpath(PSB.DATA_DIR, "matpower"))
+cp(joinpath(PSB.DATA_DIR, "matpower", "RTS_GMLC.m"), "data/RTS_GMLC.m")
+```
+
 Matpower's comprehensive dataset allows for a one-step complete PCM system build:
 
 ```julia
@@ -71,6 +62,14 @@ sys_matpower = System("./data/RTS_GMLC.m")
 ```
 
 ### Example 3: Parsing Tabular Data Format
+
+Lastly, let's copy all data related to RTS-GMLC Tabular Dataset:
+
+```julia
+cp(joinpath(PSB.DATA_DIR, "RTS_GMLC"), "data/RTS_GMLC")
+RTS_GMLC_DIR = "data/RTS_GMLC"
+```
+
 
 This format adopts .CSV files for different infrastructure types, like `bus.csv`. Moreover, it facilitates the parsing of time series data, granting users substantial flexibility in data representation and storage:
 
