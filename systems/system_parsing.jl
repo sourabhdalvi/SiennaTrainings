@@ -20,6 +20,8 @@ const PSY = PowerSystems
 # Below is an example on how we can access this dataset for extracting a PSSE RAW file.
 readdir(joinpath(PSB.DATA_DIR, "psse_raw"))
 
+mkdir("data")
+
 # For this tutorial, we will focus on the RTS-GMLC system and copy the raw file to our data directory:
 cp(joinpath(PSB.DATA_DIR, "psse_raw", "RTS-GMLC.RAW"), "data/RTS-GMLC.RAW")
 
@@ -32,7 +34,11 @@ cp(joinpath(PSB.DATA_DIR, "psse_raw", "RTS-GMLC.RAW"), "data/RTS-GMLC.RAW")
 # PSSE primarily stores network-related info. Devices will be parsed as 
 # ThermalStandard, which can later be converted to other generator types. 
 # The parser currently supports up to v33 of the PSSE RAW format.
-sys_psse = System("./data/RTS-GMLC.RAW")
+sys_psse = PSY.System("./data/RTS-GMLC.RAW") 
+    # bus_name_formatter = x->string(strip(x["name"])*"_"*string(x["index"])),
+    # load_name_formatter = x-> x["source_id"][1]*"_$(x["source_id"][2])~"*strip(x["source_id"][3]),
+    # branch_name_formatter = x-> x["source_id"][1]*"_$(x["source_id"][2])~"*strip(x["source_id"][4]),
+# )
 
 # Example 2: Parsing a Matpower .m File
 # We will  copy the MATPOWER version of the RTS-GMLC data as for this example.
@@ -41,7 +47,7 @@ readdir(joinpath(PSB.DATA_DIR, "matpower"))
 cp(joinpath(PSB.DATA_DIR, "matpower", "RTS_GMLC.m"), "data/RTS_GMLC.m")
 
 # Comprehensive data in Matpower allows for a complete PCM system build in one step.
-sys_matpower = System("./data/RTS_GMLC.m")
+sys_matpower = System("data/RTS_GMLC.m")
 
 # Example 3: Parsing Tabular Data Format
 
@@ -59,5 +65,5 @@ rawsys = PSY.PowerSystemTableData(
     timeseries_metadata_file=joinpath(RTS_GMLC_DIR, "timeseries_pointers.json"),
     generator_mapping_file=joinpath(RTS_GMLC_DIR, "generator_mapping.yaml"),
 )
-sys = PSY.System(rawsys; time_series_resolution=Dates.Hour(1), )
+sys = PSY.System(rawsys; time_series_resolution=Dates.Hour(1))
 PSY.transform_single_time_series!(sys, 24, Dates.Hour(24))

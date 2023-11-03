@@ -59,6 +59,18 @@ solver = optimizer_with_attributes(
     "mip_abs_gap" => 1e-5,      # Set the relative MIP gap tolerance
 )
 
+# or using GAMS 
+function get_optimizer_gams()
+    solver =  JuMP.optimizer_with_attributes(
+        GAMS.Optimizer,
+        "solver" => "CPLEX",
+        GAMS.Threads() => 36,
+        
+        GAMS.WorkDir() => mktempdir(; cleanup=true))
+    return solver
+end
+solver = get_optimizer_gams()
+
 # Create a Power Systems model from the specified system path
 sys = System(sys_path)
 

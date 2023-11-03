@@ -3,6 +3,7 @@ using PowerSimulations
 using PowerSystemCaseBuilder
 const PSB = PowerSystemCaseBuilder
 const PSY = PowerSystems
+
 # Introduction
 # In this script, we will use the PowerSystemsCaseBuilder.jl package,
 # which hosts a curated set of test systems. These test systems serve two
@@ -41,5 +42,6 @@ sys_rt = PSB.build_system(PSISystems, "modified_RTS_GMLC_RT_sys")
 
 # Step 5: Save the system to JSON
 # We can save the system data to a JSON file for further analysis.
+mkdir("data")
 PSY.to_json(sys_da, "data/RTS_GMLC_DA.json")
 PSY.to_json(sys_rt, "data/RTS_GMLC_RT.json")
