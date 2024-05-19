@@ -59,23 +59,13 @@ end
 ## Solver Configuration
 
 ```julia
-# Create an Xpress optimizer object with specified attributes
-solver = optimizer_with_attributes(
-    Xpress.Optimizer, 
-    "MIPRELSTOP" => 1e-5,   # Set the relative MIP gap tolerance
-    "OUTPUTLOG" => 1,       # Enable logging
-    "MAXTIME" => 200,      # Set the maximum solver time (in seconds)
-    "THREADS" => 12,        # Set the number of solver threads to use
-    "MAXMEMORYSOFT" => 90000 # Set the maximum amount of memory the solver can use (in MB)
-)
-
-# Alternatively, use an open-source solver
+# using an Open-source solver HiGHs to create optimizer object with specified attributes 
 solver = optimizer_with_attributes(
     HiGHS.Optimizer,
-    "time_limit" => 150.0,
-    "threads" => 12,
-    "log_to_console" => true,
-    "mip_abs_gap" => 1e-5
+    "time_limit" => 150.0,     # Set the maximum solver time (in seconds)
+    "threads" => 12,           # Set the number of solver threads to use
+    "log_to_console" => true,  # Enable logging
+    "mip_abs_gap" => 1e-5      # Set the relative MIP gap tolerance
 )
 ```
 

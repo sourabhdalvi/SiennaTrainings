@@ -30,15 +30,13 @@ if !ispath(output_dir)
     mkpath(output_dir)
 end
 
-
-# Create an Xpress optimizer object with specified attributes
+# using an Open-source solver HiGHs to create optimizer object with specified attributes 
 solver = optimizer_with_attributes(
-    Xpress.Optimizer, 
-    "MIPRELSTOP" => 1e-5, # Set the relative mip gap tolerance
-    "OUTPUTLOG" => 1, # Enable logging
-    "MAXTIME" => 1000, # Set the maximum solver time (in seconds)
-    "THREADS" => 36, # Set the number of solver threads to use
-    "MAXMEMORYSOFT" => 30000, # Set the maximum amount of memory the solver can use (in MB)
+    HiGHS.Optimizer,
+    "time_limit" => 150.0,     # Set the maximum solver time (in seconds)
+    "threads" => 12,           # Set the number of solver threads to use
+    "log_to_console" => true,  # Enable logging
+    "mip_abs_gap" => 1e-5      # Set the relative MIP gap tolerance
 )
 
 template_uc = PSI.template_unit_commitment(; network = CopperPlatePowerModel)

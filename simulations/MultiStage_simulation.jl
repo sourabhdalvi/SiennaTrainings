@@ -28,12 +28,13 @@ if !ispath(output_dir)
     mkpath(output_dir)
 end
 
-# Create an Xpress optimizer object with specified attributes
+# using an Open-source solver HiGHs to create optimizer object with specified attributes 
 solver = optimizer_with_attributes(
-    Xpress.Optimizer, 
-    "MIPRELSTOP" => 1e-5, # Set the relative mip gap tolerance
-    "OUTPUTLOG" => 1, # Enable logging
-    "MAXTIME" => 300, # Set the maximum solver time (in seconds)
+    HiGHS.Optimizer,
+    "time_limit" => 150.0,     # Set the maximum solver time (in seconds)
+    "threads" => 12,           # Set the number of solver threads to use
+    "log_to_console" => true,  # Enable logging
+    "mip_abs_gap" => 1e-5      # Set the relative MIP gap tolerance
 )
 
 sys_DA = System(sys_path_DA)
