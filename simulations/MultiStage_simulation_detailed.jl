@@ -16,7 +16,7 @@ using HiGHS
 sim_name = ARGS[1]
 sys_path_DA = ARGS[2]
 sys_path_RT = ARGS[2]
-output_dir = ARGS[3]
+output_dir =  ARGS[3]
 
 # Simulation setting
 interval = 24          # Hourly time interval
@@ -32,9 +32,10 @@ if !ispath(output_dir)
     mkpath(output_dir)
 end
 
+
 # Create an Xpress optimizer object with specified attributes
 solver = optimizer_with_attributes(
-    Xpress.Optimizer,
+    Xpress.Optimizer, 
     "MIPRELSTOP" => 1e-5, # Set the relative mip gap tolerance
     "OUTPUTLOG" => 1, # Enable logging
     "MAXTIME" => 300, # Set the maximum solver time (in seconds)
@@ -48,7 +49,7 @@ solver = optimizer_with_attributes(
     "time_limit" => 150.0,     # Set the maximum solver time (in seconds)
     "threads" => 12,           # Set the number of solver threads to use
     "log_to_console" => true,  # Enable logging
-    "mip_abs_gap" => 1e-5,      # Set the relative MIP gap tolerance
+    "mip_abs_gap" => 1e-5      # Set the relative MIP gap tolerance
 )
 
 # Create a PowerSystems System from the specified system path
@@ -88,13 +89,7 @@ PSY.transform_single_time_series!(sys_RT, horizon_RT, Minute(interval_RT))
 #    more models and defining how and when data flows between models.
 
 # Create a template for the Unit Commitment (UC) problem
-template_uc = ProblemTemplate(
-    NetworkModel(
-        PSI.CopperPlatePowerModel,
-        duals=[CopperPlateBalanceConstraint],
-        use_slacks=true,
-    ),
-)
+template_uc = ProblemTemplate(NetworkModel(PSI.CopperPlatePowerModel, duals=[CopperPlateBalanceConstraint], use_slacks=true))
 set_device_model!(template_uc, ThermalStandard, ThermalStandardUnitCommitment)
 set_device_model!(template_uc, ThermalMultiStart, ThermalBasicUnitCommitment)
 set_device_model!(template_uc, GenericBattery, StorageDispatchWithReserves)
@@ -106,17 +101,15 @@ set_device_model!(template_uc, Transformer2W, StaticBranch)
 set_device_model!(template_uc, TapTransformer, StaticBranch)
 set_service_model!(
     template_uc,
-    ServiceModel(VariableReserve{ReserveUp}, RangeReserve, use_slacks=true),
+    ServiceModel(
+        VariableReserve{ReserveUp},
+        RangeReserve,
+        use_slacks=true,
+    )
 )
 
 # Create a template for the Economic Dispatch (ED) problem
-template_rt = ProblemTemplate(
-    NetworkModel(
-        PSI.CopperPlatePowerModel,
-        duals=[CopperPlateBalanceConstraint],
-        use_slacks=true,
-    ),
-)
+template_rt = ProblemTemplate(NetworkModel(PSI.CopperPlatePowerModel, duals=[CopperPlateBalanceConstraint], use_slacks=true))
 set_device_model!(template_rt, ThermalStandard, ThermalStandardDispatch)
 set_device_model!(template_rt, ThermalMultiStart, ThermalBasicDispatch)
 set_device_model!(template_rt, GenericBattery, StorageDispatchWithReserves)
@@ -130,8 +123,7 @@ set_device_model!(template_rt, TapTransformer, StaticBranch)
 # Define the simulation models in the sequence of excution 
 models = SimulationModels(
     decision_models=[
-        DecisionModel(
-            template_uc,
+        DecisionModel(template_uc,
             sys_DA,
             name="UC",
             optimizer=solver,
@@ -141,8 +133,7 @@ models = SimulationModels(
             check_numerical_bounds=false,
             warm_start=true,
         ),
-        DecisionModel(
-            template_rt,
+        DecisionModel(template_rt,
             sys_RT,
             name="RT",
             optimizer=solver,
@@ -154,6 +145,7 @@ models = SimulationModels(
         ),
     ],
 )
+
 
 ## Define the simulation sequence
 # The SimulationSequence is primarily relevant for multi-stage models.
@@ -170,14 +162,14 @@ sequence = SimulationSequence(
     feedforwards=Dict(
         "RT" => [
             SemiContinuousFeedforward(;
-                component_type=ThermalStandard,
-                source=OnVariable,
-                affected_values=[ActivePowerVariable],
+                component_type = ThermalStandard,
+                source = OnVariable,
+                affected_values = [ActivePowerVariable],
             ),
             SemiContinuousFeedforward(;
-                component_type=ThermalMultiStart,
-                source=OnVariable,
-                affected_values=[ActivePowerVariable],
+                component_type = ThermalMultiStart,
+                source = OnVariable,
+                affected_values = [ActivePowerVariable],
             ),
         ],
     ),
@@ -195,7 +187,7 @@ sim = Simulation(
 )
 
 # Create a simulation object
-build!(sim)
+build!(sim,)
 
 # Execute the simulation with a progress bar
-execute!(sim, enable_progress_bar=true)
+execute!(sim, enable_progress_bar=true,)

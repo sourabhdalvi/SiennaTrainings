@@ -1,3 +1,4 @@
+
 ## Package Imports
 
 ```julia
@@ -42,30 +43,26 @@ end
 ```
 
 ### Solver Configuration
-
 Create an Xpress optimizer object with specified attributes
-
 ```julia
 #
 solver = optimizer_with_attributes(
-    Xpress.Optimizer,
+    Xpress.Optimizer, 
     "MIPRELSTOP" => 1e-5,   # Set the relative mip gap tolerance
     "OUTPUTLOG" => 1,       # Enable logging
     "MAXTIME" => 300,       # Set the maximum solver time (in seconds)
     "THREADS" => 12,        # Set the number of solver threads to use
-    "MAXMEMORYSOFT" => 30000, # Set the maximum amount of memory the solver can use (in MB)
+    "MAXMEMORYSOFT" => 30000 # Set the maximum amount of memory the solver can use (in MB)
 )
 ```
-
 Alternatively, use an open-source solver HiGHS
-
 ```julia
 solver = optimizer_with_attributes(
     HiGHS.Optimizer,
     "time_limit" => 150.0,     # Set the maximum solver time (in seconds)
     "threads" => 12,           # Set the number of solver threads to use
     "log_to_console" => true,  # Enable logging
-    "mip_abs_gap" => 1e-5,      # Set the relative MIP gap tolerance
+    "mip_abs_gap" => 1e-5      # Set the relative MIP gap tolerance
 )
 ```
 
@@ -85,22 +82,18 @@ PSY.transform_single_time_series!(sys_RT, horizon_RT, Minute(interval_RT))
 
 PowerSimulations.jl enables the simulation of power systems optimization problems in a structured approach. It consists of the following components:
 
- 1. **Mathematical Formulations**: Mathematical formulations can be selected for each component using `DeviceModel` and `ServiceModel`.
+1. **Mathematical Formulations**: Mathematical formulations can be selected for each component using `DeviceModel` and `ServiceModel`.
 
- 2. **Problem Definition**: A problem can be defined by creating model entries in Operations ProblemTemplates.
- 3. **Model Building**: Models, such as `DecisionModel` or `EmulationModel`, can be built by applying a `ProblemTemplate` to a `System` and can be executed/solved in isolation or as part of a `Simulation`.
- 4. **Simulation**: Simulations can be defined and executed by sequencing one or more models and defining how and when data flows between models.
+2. **Problem Definition**: A problem can be defined by creating model entries in Operations ProblemTemplates.
+
+3. **Model Building**: Models, such as `DecisionModel` or `EmulationModel`, can be built by applying a `ProblemTemplate` to a `System` and can be executed/solved in isolation or as part of a `Simulation`.
+
+4. **Simulation**: Simulations can be defined and executed by sequencing one or more models and defining how and when data flows between models.
 
 ### Creating a Template for the Unit Commitment (UC) Problem
 
 ```julia
-template_uc = ProblemTemplate(
-    NetworkModel(
-        PSI.CopperPlatePowerModel,
-        duals=[CopperPlateBalanceConstraint],
-        use_slacks=true,
-    ),
-)
+template_uc = ProblemTemplate(NetworkModel(PSI.CopperPlatePowerModel, duals=[CopperPlateBalanceConstraint], use_slacks=true))
 set_device_model!(template_uc, ThermalStandard, ThermalStandardUnitCommitment)
 set_device_model!(template_uc, ThermalMultiStart, ThermalBasicUnitCommitment)
 set_device_model!(template_uc, GenericBattery, SS.StorageDispatch)
@@ -112,7 +105,11 @@ set_device_model!(template_uc, Transformer2W, StaticBranch)
 set_device_model!(template_uc, TapTransformer, StaticBranch)
 set_service_model!(
     template_uc,
-    ServiceModel(VariableReserve{ReserveUp}, RangeReserve, use_slacks=true),
+    ServiceModel(
+        VariableReserve{ReserveUp},
+        RangeReserve,
+        use_slacks=true,
+    )
 )
 ```
 
@@ -122,8 +119,7 @@ set_service_model!(
 # Define the simulation models in the sequence of execution 
 models = SimulationModels(
     decision_models=[
-        DecisionModel(
-            template_uc,
+        DecisionModel(template_uc,
             sys_DA,
             name="UC",
             optimizer=solver,
@@ -133,8 +129,7 @@ models = SimulationModels(
             check_numerical_bounds=false,
             warm_start=true,
         ),
-        DecisionModel(
-            template_rt,
+        DecisionModel(template_rt,
             sys_RT,
             name="RT",
             optimizer=solver,
@@ -147,7 +142,6 @@ models = SimulationModels(
     ],
 )
 ```
-
 ## Defining the Simulation Sequence
 
 The `SimulationSequence` is primarily relevant for multi-stage models. It serves as the mechanism to orchestrate the flow of information between Decision models. In this example, we're dealing with a classic Unit Commitment (UC) to Economic Dispatch (ED) simulation, where the goal is to convey the commitment status from the UC problem to the ED problem. To achieve this, Sienna offers the `SemiContinuousFeedforward` object, which enables us to forward the commitment status of the thermal generator using a constraint within the Economic Dispatch model.
@@ -155,77 +149,71 @@ The `SimulationSequence` is primarily relevant for multi-stage models. It serves
 ### Available FeedForwards
 
 #### EnergyLimitFeedforward
-
 Adds a constraint to limit the sum of a variable over the number of periods to the source value.
 
 ```julia
 EnergyLimitFeedforward(;
-    component_type=GenericBattery,
-    source=EnergyVariable,
-    affected_values=[EnergyVariable],
-    number_of_periods=10,
+    component_type = GenericBattery,
+    source = EnergyVariable,
+    affected_values = [EnergyVariable],
+    number_of_periods = 10,
 )
 ```
 
 #### EnergyTargetFeedforward
-
 Adds a constraint to enforce a minimum energy level target with a slack variable associated with a penalty term.
 
 ```julia
 EnergyTargetFeedforward(;
-    component_type=GenericBattery,
-    source=EnergyVariable,
-    affected_values=[EnergyVariable],
-    target_period=24,
-    penalty_cost=10000,
+    component_type = GenericBattery,
+    source = EnergyVariable,
+    affected_values = [EnergyVariable],
+    target_period = 24,
+    penalty_cost = 10000,
 )
 ```
 
 #### SemiContinuousFeedforward
-
 Adds a constraint to make the bounds of a variable 0.0. Effectively allows turning off a value.
 
 ```julia
 SemiContinuousFeedforward(;
-    component_type=ThermalMultiStart,
-    source=OnVariable,
-    affected_values=[ActivePowerVariable, ReactivePowerVariable],
+    component_type = ThermalMultiStart,
+    source = OnVariable,
+    affected_values = [ActivePowerVariable, ReactivePowerVariable],
 )
 ```
 
 #### LowerBoundFeedforward
-
 Adds a lower bound constraint to a variable.
 
 ```julia
 LowerBoundFeedforward(;
-    component_type=RenewableDispatch,
-    source=ActivePowerVariable,
-    affected_values=[ActivePowerVariable],
+    component_type = RenewableDispatch,
+    source = ActivePowerVariable,
+    affected_values = [ActivePowerVariable],
 )
 ```
 
 #### UpperBoundFeedforward
-
 Adds an upper bound constraint to a variable.
 
 ```julia
 UpperBoundFeedforward(;
-    component_type=RenewableDispatch,
-    source=ActivePowerVariable,
-    affected_values=[ActivePowerVariable],
+    component_type = RenewableDispatch,
+    source = ActivePowerVariable,
+    affected_values = [ActivePowerVariable],
 )
 ```
 
 #### FixValueFeedforward
-
 Fixes a Variable or Parameter Value in the model. Is the only Feed Forward that can be used with a Parameter or a Variable as the affected value.
 
 ```julia
 ff = FixValueFeedforward(;
-    component_type=HydroDispatch,
-    source=OnVariable,
-    affected_values=[OnStatusParameter],
+    component_type = HydroDispatch,
+    source = OnVariable,
+    affected_values = [OnStatusParameter],
 )
 ```
 
@@ -238,26 +226,24 @@ sequence = SimulationSequence(
     feedforwards=Dict(
         "RT" => [
             SemiContinuousFeedforward(;
-                component_type=ThermalStandard,
-                source=OnVariable,
-                affected_values=[ActivePowerVariable],
+                component_type = ThermalStandard,
+                source = OnVariable,
+                affected_values = [ActivePowerVariable],
             ),
             SemiContinuousFeedforward(;
-                component_type=ThermalMultiStart,
-                source=OnVariable,
-                affected_values=[ActivePowerVariable],
+                component_type = ThermalMultiStart,
+                source = OnVariable,
+                affected_values = [ActivePowerVariable],
             ),
         ],
     ),
     ini_cond_chronology=InterProblemChronology(),
 )
 ```
-
 In this snippet, we create a SimulationSequence object that specifies how different models interact with each other. Specifically, it defines the transfer of information from the Unit Commitment (UC) model to the Economic Dispatch (ED) model using the SemiContinuousFeedforward mechanism.
 
 ### Creating a Simulation Object
-
-Once you've defined the necessary components, such as stages, models, and the simulation sequence, you can proceed to create and execute a simulation in PowerSimulations.
+Once you've defined the necessary components, such as stages, models, and the simulation sequence, you can proceed to create and execute a simulation in PowerSimulations. 
 
 ```julia
 # Create a simulation object

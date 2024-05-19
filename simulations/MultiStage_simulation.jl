@@ -15,7 +15,7 @@ using HiGHS
 sim_name = ARGS[1]
 sys_path_DA = ARGS[2]
 sys_path_RT = ARGS[2]
-output_dir = ARGS[3]
+output_dir =  ARGS[3]
 
 # Simulation setting
 interval = 24          # Hourly time interval
@@ -30,7 +30,7 @@ end
 
 # Create an Xpress optimizer object with specified attributes
 solver = optimizer_with_attributes(
-    Xpress.Optimizer,
+    Xpress.Optimizer, 
     "MIPRELSTOP" => 1e-5, # Set the relative mip gap tolerance
     "OUTPUTLOG" => 1, # Enable logging
     "MAXTIME" => 300, # Set the maximum solver time (in seconds)
@@ -41,16 +41,16 @@ sys_RT = System(sys_path_RT)
 PSY.transform_single_time_series!(sys_DA, horizon, Hour(interval))
 PSY.transform_single_time_series!(sys_RT, horizon_RT, Minute(interval_RT))
 
-template_uc =
-    PSI.template_unit_commitment(; network=NetworkModel(StandardPTDFModel, use_slacks=true))
-template_rt = PSI.template_economic_dispatch(;
-    network=NetworkModel(StandardPTDFModel, use_slacks=true),
-)
+
+template_uc = PSI.template_unit_commitment(; 
+    network = NetworkModel(StandardPTDFModel, use_slacks = true))
+template_rt = PSI.template_economic_dispatch(; 
+    network = NetworkModel(StandardPTDFModel, use_slacks = true))
+
 
 models = SimulationModels(
     decision_models=[
-        DecisionModel(
-            template_uc,
+        DecisionModel(template_uc,
             sys_DA,
             name="UC",
             optimizer=solver,
@@ -60,8 +60,7 @@ models = SimulationModels(
             check_numerical_bounds=false,
             warm_start=true,
         ),
-        DecisionModel(
-            template_rt,
+        DecisionModel(template_rt,
             sys_RT,
             name="RT",
             optimizer=solver,
@@ -79,14 +78,14 @@ sequence = SimulationSequence(
     feedforwards=Dict(
         "RT" => [
             SemiContinuousFeedforward(;
-                component_type=ThermalStandard,
-                source=OnVariable,
-                affected_values=[ActivePowerVariable],
+                component_type = ThermalStandard,
+                source = OnVariable,
+                affected_values = [ActivePowerVariable],
             ),
             SemiContinuousFeedforward(;
-                component_type=ThermalMultiStart,
-                source=OnVariable,
-                affected_values=[ActivePowerVariable],
+                component_type = ThermalMultiStart,
+                source = OnVariable,
+                affected_values = [ActivePowerVariable],
             ),
         ],
     ),
@@ -101,5 +100,5 @@ sim = Simulation(
     simulation_folder=output_dir,
 )
 
-build!(sim)
-execute!(sim, enable_progress_bar=true)
+build!(sim,)
+execute!(sim, enable_progress_bar=true,)

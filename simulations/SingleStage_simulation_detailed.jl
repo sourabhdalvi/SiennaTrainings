@@ -42,12 +42,12 @@ end
 
 # Create an Xpress optimizer object with specified attributes
 solver = optimizer_with_attributes(
-    Xpress.Optimizer,
+    Xpress.Optimizer, 
     "MIPRELSTOP" => 1e-5,   # Set the relative MIP gap tolerance
     "OUTPUTLOG" => 1,       # Enable logging
     "MAXTIME" => 200,      # Set the maximum solver time (in seconds)
     # "THREADS" => 12,        # Set the number of solver threads to use
-    "MAXMEMORYSOFT" => 90000, # Set the maximum amount of memory the solver can use (in MB)
+    "MAXMEMORYSOFT" => 90000 # Set the maximum amount of memory the solver can use (in MB)
 )
 
 # or using an Open-source solver
@@ -56,20 +56,9 @@ solver = optimizer_with_attributes(
     "time_limit" => 150.0,     # Set the maximum solver time (in seconds)
     "threads" => 12,           # Set the number of solver threads to use
     "log_to_console" => true,  # Enable logging
-    "mip_abs_gap" => 1e-5,      # Set the relative MIP gap tolerance
+    "mip_abs_gap" => 1e-5      # Set the relative MIP gap tolerance
 )
 
-# or using GAMS 
-function get_optimizer_gams()
-    solver =  JuMP.optimizer_with_attributes(
-        GAMS.Optimizer,
-        "solver" => "CPLEX",
-        GAMS.Threads() => 36,
-        
-        GAMS.WorkDir() => mktempdir(; cleanup=true))
-    return solver
-end
-solver = get_optimizer_gams()
 
 # Create a Power Systems model from the specified system path
 sys = System(sys_path)
@@ -102,6 +91,8 @@ PSY.transform_single_time_series!(sys, horizon, Hour(interval))
 # 4. Simulation: Simulations can be defined and executed by sequencing one or
 #    more models and defining how and when data flows between models.
 
+
+
 # Create a Template for the Unit Commitment (UC) Problem
 # This involves defining the problem template, starting with the selection
 # of the NetworkModel for the simulation problem. The most common models
@@ -115,13 +106,7 @@ PSY.transform_single_time_series!(sys, horizon, Hour(interval))
 # variables to allow for dropped load or excess generation, which incurs a 
 # cost of $10,000/MWh.
 
-template_uc = ProblemTemplate(
-    NetworkModel(
-        PSI.CopperPlatePowerModel,
-        duals=[CopperPlateBalanceConstraint],
-        use_slacks=true,
-    ),
-)
+template_uc = ProblemTemplate(NetworkModel(PSI.CopperPlatePowerModel, duals=[CopperPlateBalanceConstraint], use_slacks=true))
 
 # The ProblemTemplate also consists of two other models that help users 
 # describe the technical requirements for the simulations. The DeviceModel 
@@ -152,7 +137,11 @@ set_device_model!(template_uc, TapTransformer, StaticBranch)
 # to be modeled with options like getting duals and slack.
 set_service_model!(
     template_uc,
-    ServiceModel(VariableReserve{ReserveUp}, RangeReserve, use_slacks=true),
+    ServiceModel(
+        VariableReserve{ReserveUp},
+        RangeReserve,
+        use_slacks=true,
+    )
 )
 
 # Define the simulation models
@@ -173,7 +162,8 @@ models = SimulationModels(
 )
 
 # Define the simulation sequence
-sequence = SimulationSequence(models=models, ini_cond_chronology=InterProblemChronology())
+sequence =
+    SimulationSequence(models=models, ini_cond_chronology=InterProblemChronology())
 
 # Create a simulation object
 sim = Simulation(
@@ -213,10 +203,7 @@ constraints_dict = PSI.get_constraints(optimization_cont)
 keys(constraints_dict)
 
 # You can also inspect the constraint array which is index by device name and time steps
-constraints_dict[PSI.ConstraintKey{PSI.RampConstraint, PSY.ThermalStandard}("up")][
-    "202_STEAM_3",
-    1,
-]
+constraints_dict[PSI.ConstraintKey{PSI.RampConstraint, PSY.ThermalStandard}("up")]["202_STEAM_3", 1]
 
 # Finally, if you would like to examine the entire model, you can save the JuMP Model to a text file using the code below.
 # I highly recommend reducing the number of time periods, or this file can become very large quite quickly.
